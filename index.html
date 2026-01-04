@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Daily Malarkey - Final Generator</title>
+    <title>Daily Malarkey - Asset Loader</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -50,20 +50,14 @@
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
-            list-style: none; /* Hides default arrow in some browsers */
+            list-style: none;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         
-        summary::after {
-            content: '+'; 
-            font-weight: bold;
-        }
-        
-        details[open] summary::after {
-            content: '-';
-        }
+        summary::after { content: '+'; font-weight: bold; }
+        details[open] summary::after { content: '-'; }
 
         /* Inputs */
         .input-row { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
@@ -101,6 +95,7 @@
             box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
 
+        /* HEADER CONTAINER */
         .slide-header {
             position: absolute;
             top: 0; left: 0;
@@ -108,7 +103,22 @@
             height: var(--header-height);
             background-color: white;
             box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-            z-index: 20; 
+            z-index: 20;
+            
+            /* Flexbox to center the logo image */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* LOGO IMAGE STYLING */
+        .header-logo {
+            /* Ensures logo fits inside box regardless of slider settings */
+            max-width: 90%;
+            max-height: 85%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
         }
 
         .slide-content {
@@ -207,6 +217,9 @@ Napa sighed, “I thought what he [DJ Merlon] and I had was special. Now he want
     <div id="preview-stage"></div>
 
 <script>
+    // --- CONFIGURE YOUR ASSET PATH HERE ---
+    const LOGO_PATH = "assets/header_logo.png";
+
     function syncValues(source, targetId, varName) {
         document.getElementById(targetId).value = source.value;
         document.documentElement.style.setProperty(varName, source.value + "px");
@@ -244,8 +257,23 @@ Napa sighed, “I thought what he [DJ Merlon] and I had was special. Now he want
             const slide = document.createElement('div');
             slide.className = 'slide';
 
+            // --- HEADER WITH LOGO FROM ASSETS ---
             const header = document.createElement('div');
             header.className = 'slide-header';
+            
+            const img = document.createElement('img');
+            img.src = LOGO_PATH;
+            img.className = 'header-logo';
+            
+            // Add error handling in case the user forgets to create the folder
+            img.onerror = function() {
+                this.style.display = 'none';
+                header.innerText = "Error: assets/header_logo.png not found";
+                header.style.color = "red";
+                header.style.fontSize = "12px";
+            };
+
+            header.appendChild(img);
             slide.appendChild(header);
 
             const bodyDiv = document.createElement('div');
@@ -288,7 +316,9 @@ Napa sighed, “I thought what he [DJ Merlon] and I had was special. Now he want
             clone.style.zIndex = "-9999"; 
             
             document.body.appendChild(clone);
-            await new Promise(r => setTimeout(r, 100));
+            
+            // Wait slightly longer to ensure the local image renders
+            await new Promise(r => setTimeout(r, 200));
 
             const canvas = await html2canvas(clone, {
                 scale: 1,
