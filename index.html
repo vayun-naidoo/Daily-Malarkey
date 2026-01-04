@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Daily Malarkey - Final Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <style>
+        :root {
+            /* Layout Variables */
+            --header-height: 96px;      
+            --content-padding: 25px;     
+            --footer-buffer: 20px;       
+        }
+
+        body {
+            font-family: sans-serif;
+            background-color: #222;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar {
+            width: 400px;
+            background: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .control-group { background: #f4f4f4; padding: 10px; border-radius: 6px; }
+        label { font-size: 12px; font-weight: bold; color: #666; display: block; margin-bottom: 5px; }
+        
+        /* Advanced Tab Styling */
+        details {
+            background: #eee;
+            border-radius: 6px;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        
+        summary {
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            list-style: none; /* Hides default arrow in some browsers */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        summary::after {
+            content: '+'; 
+            font-weight: bold;
+        }
+        
+        details[open] summary::after {
+            content: '-';
+        }
+
+        /* Inputs */
+        .input-row { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        input[type="range"] { flex: 1; cursor: pointer; }
+        input[type="number"] { width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
+
+        textarea { width: 100%; height: 200px; padding: 10px; box-sizing: border-box; font-family: monospace; }
+        button { padding: 15px; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        #btn-gen { background-color: #111; color: white; margin-top: auto;}
+        #btn-dl { background-color: #aa0000; color: white; }
+
+        #preview-stage {
+            flex: 1;
+            background-color: #555;
+            padding: 40px;
+            overflow: auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 50px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .slide {
+            width: 1080px;
+            height: 1350px;
+            background-color: white;
+            position: relative;
+            flex-shrink: 0;
+            overflow: hidden;
+            transform: scale(0.35);
+            transform-origin: top left;
+            margin-bottom: -875px; 
+            margin-right: -700px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .slide-header {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: var(--header-height);
+            background-color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            z-index: 20; 
+        }
+
+        .slide-content {
+            position: absolute; 
+            top: var(--header-height); 
+            left: 0;
+            width: 100%; 
+            height: calc(100% - var(--header-height) - var(--footer-buffer));
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; 
+            align-items: flex-start; 
+            padding-left: var(--content-padding);
+            padding-right: var(--content-padding);
+            font-family: 'Georgia', serif;
+            color: #111;
+            line-height: 1.5;
+            text-align: left;
+            overflow-wrap: break-word;
+            overflow: hidden;
+        }
+        
+        .slide-content p { 
+            margin: 0 0 20px 0; 
+            width: 100%;
+        }
+        .slide-content p:last-child { margin-bottom: 0; }
+
+        .dm-bold { font-weight: 900; }
+        .dm-italic { font-style: italic; }
+
+        .drop-cap {
+            float: left;
+            font-size: 3em;
+            line-height: 0.8;
+            padding-right: 10px;
+            padding-top: 10px;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>Layout Generator</h2>
+
+        <div class="control-group">
+            <label>Input Text (:::bundle to split)</label>
+            <textarea id="inputText">BREAKING NEWS: A Third Zulu Man Has Been Found In Ibiza
+:::bundle
+After decades of speculation and billions spent in taxpayer money, researchers have finally confirmed the existence of a third Zulu man in Ibiza. Scientists DJ Merlon and Enoo Napa explained to Daily Malarkey that the results spell out a promising future for the country.
+
+“Look, we thought that it was just us two here,” explained Merlon. “It was difficult navigating the lifestyle of an internationally acclaimed DJ all the way in the Med with just one other person.” Napa continued on from Merlon, saying, “When we found out there was another one, we thought it was too good to be true.”
+
+The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate their achievements. The song has been the go-to gateway to Afrobeats for White South Africans since. 
+:::end
+:::bundle
+“It’s safe to say we were probably the only people of colour on the island at the time. You can’t imagine the stares we got.”
+
+The duo have noted that the findings of another Zulu man have caused some tension between them, with DJ Merlon ready to rerecord the track and include the new member, while Enoo Napa is more reluctant.
+
+Napa sighed, “I thought what he [DJ Merlon] and I had was special. Now he wants to bring someone else into our relationship.” Daily Malarkey awaits the return of Jesus Christ, for the release of The Rapture Pt.IV by Keinemusik. #DM#
+:::end
+</textarea>
+        </div>
+
+        <details>
+            <summary>Advanced Settings</summary>
+            
+            <div style="margin-top: 15px;">
+                <label>Header Height (px)</label>
+                <div class="input-row">
+                    <input type="range" id="range-head" min="50" max="400" value="96" 
+                           oninput="syncValues(this, 'num-head', '--header-height')">
+                    <input type="number" id="num-head" min="50" max="400" value="96" 
+                           oninput="syncValues(this, 'range-head', '--header-height')">
+                </div>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <label>Side Padding (px)</label>
+                <div class="input-row">
+                    <input type="range" id="range-side" min="20" max="200" value="25" 
+                           oninput="syncValues(this, 'num-side', '--content-padding')">
+                    <input type="number" id="num-side" min="20" max="200" value="25" 
+                           oninput="syncValues(this, 'range-side', '--content-padding')">
+                </div>
+            </div>
+        </details>
+
+        <button id="btn-gen" onclick="generateAll()">1. Update Preview</button>
+        <button id="btn-dl" onclick="downloadAll()">2. Download All</button>
+    </div>
+
+    <div id="preview-stage"></div>
+
+<script>
+    function syncValues(source, targetId, varName) {
+        document.getElementById(targetId).value = source.value;
+        document.documentElement.style.setProperty(varName, source.value + "px");
+    }
+
+    function generateAll() {
+        const container = document.getElementById('preview-stage');
+        const rawText = document.getElementById('inputText').value;
+        container.innerHTML = ''; 
+
+        const matches = rawText.matchAll(/:::bundle([\s\S]*?):::end/g);
+        let count = 0;
+
+        for (const match of matches) {
+            let content = match[1].trim();
+            content = content.replace(/#(.*?)#/g, '<span class="dm-bold">$1</span>');
+            content = content.replace(/__(.*?)__/g, '<span class="dm-italic">$1</span>');
+            
+            let paragraphs = content.split('\n').filter(p => p.trim() !== '');
+            
+            if (count === 0 && paragraphs.length > 0) {
+                let firstP = paragraphs[0];
+                let firstChar = firstP.charAt(0);
+                let rest = firstP.slice(1);
+                paragraphs[0] = `<span class="drop-cap">${firstChar}</span>${rest}`;
+            }
+
+            const finalHtml = paragraphs.map(p => `<p>${p}</p>`).join('');
+
+            const wrapper = document.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.flexDirection = 'column';
+            wrapper.style.gap = '10px';
+
+            const slide = document.createElement('div');
+            slide.className = 'slide';
+
+            const header = document.createElement('div');
+            header.className = 'slide-header';
+            slide.appendChild(header);
+
+            const bodyDiv = document.createElement('div');
+            bodyDiv.className = 'slide-content';
+            bodyDiv.innerHTML = finalHtml;
+            slide.appendChild(bodyDiv);
+
+            wrapper.appendChild(slide);
+            container.appendChild(wrapper);
+
+            // --- AUTO-SCALE LOGIC ---
+            let fontSize = 85; 
+            bodyDiv.style.fontSize = fontSize + "px";
+
+            while (bodyDiv.scrollHeight > bodyDiv.clientHeight && fontSize > 20) {
+                fontSize--;
+                bodyDiv.style.fontSize = fontSize + "px";
+            }
+            
+            const btn = document.createElement('button');
+            btn.innerText = `Download Slide ${count + 1}`;
+            btn.style.padding = "10px";
+            btn.style.backgroundColor = "#333";
+            btn.style.color = "#fff";
+            btn.onclick = function() { downloadSingle(slide, `slide_${count+1}.png`); }
+            wrapper.appendChild(btn);
+
+            count++;
+        }
+    }
+
+    async function downloadSingle(originalElement, filename) {
+        try {
+            const clone = originalElement.cloneNode(true);
+            clone.style.transform = "none"; 
+            clone.style.margin = "0";
+            clone.style.position = "fixed"; 
+            clone.style.top = "0";
+            clone.style.left = "0";
+            clone.style.zIndex = "-9999"; 
+            
+            document.body.appendChild(clone);
+            await new Promise(r => setTimeout(r, 100));
+
+            const canvas = await html2canvas(clone, {
+                scale: 1,
+                width: 1080,
+                height: 1350,
+                useCORS: true,
+                backgroundColor: "#ffffff"
+            });
+
+            document.body.removeChild(clone);
+            canvas.toBlob(blob => saveAs(blob, filename));
+
+        } catch (err) {
+            alert("Error: " + err.message);
+        }
+    }
+
+    async function downloadAll() {
+        const btn = document.getElementById('btn-dl');
+        btn.innerText = "Processing...";
+        const slides = document.querySelectorAll('.slide');
+        for (let i = 0; i < slides.length; i++) {
+            await downloadSingle(slides[i], `slide_${i+1}.png`);
+        }
+        btn.innerText = "2. Download All";
+    }
+
+    window.onload = generateAll;
+</script>
+</body>
+</html>
