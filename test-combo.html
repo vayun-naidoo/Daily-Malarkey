@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Daily Malarkey - Master Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <style>
+        :root {
+            --header-height: 107px;      
+            --content-padding: 20px;     
+            --footer-buffer: 20px;       
+        }
+
+        body {
+            font-family: sans-serif;
+            background-color: #222;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar {
+            width: 420px;
+            background: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        .control-group { background: #f4f4f4; padding: 10px; border-radius: 6px; }
+        label { font-size: 12px; font-weight: bold; color: #666; display: block; margin-bottom: 5px; }
+        
+        details {
+            background: #eee;
+            border-radius: 6px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+        }
+        
+        summary {
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        summary::after { content: '+'; font-weight: bold; }
+        details[open] summary::after { content: '-'; }
+
+        .input-row { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        input[type="range"] { flex: 1; cursor: pointer; }
+        input[type="number"] { width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
+        input[type="checkbox"] { width: auto; }
+        select { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+
+        textarea { width: 100%; height: 200px; padding: 10px; box-sizing: border-box; font-family: monospace; }
+        
+        button { padding: 15px; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; transition: 0.2s; }
+        button:hover { opacity: 0.9; }
+        
+        #btn-file { background-color: #444; color: white; width: 100%; margin-bottom: 10px; padding: 10px;}
+        #btn-gen { background-color: #111; color: white; margin-top: auto;}
+        #btn-dl { background-color: #aa0000; color: white; }
+
+        .file-upload-btn {
+            background: #ddd; border: 1px dashed #999; width: 100%; padding: 10px; 
+            text-align: center; cursor: pointer; box-sizing: border-box; font-size: 12px;
+        }
+
+        /* PREVIEW AREA */
+        #preview-stage {
+            flex: 1;
+            background-color: #555;
+            padding: 40px;
+            overflow: auto;
+            display: flex;
+            flex-direction: column; /* Stack cover on top of slides */
+            align-items: center;
+            gap: 50px;
+        }
+
+        /* CANVAS STYLE */
+        #cover-canvas {
+            width: 540px; /* Display at half size */
+            height: 675px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            background: white;
+        }
+
+        /* HTML SLIDE STYLE */
+        .slide {
+            width: 1080px;
+            height: 1350px;
+            background-color: white;
+            position: relative;
+            flex-shrink: 0;
+            overflow: hidden;
+            transform: scale(0.5); /* Preview scale */
+            transform-origin: top center;
+            margin-bottom: -675px; /* Adjust for scale */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        .slide-header {
+            position: absolute; top: 0; left: 0; width: 100%;
+            height: var(--header-height);
+            background-color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            z-index: 20;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .header-logo { max-width: 98%; max-height: 98%; width: auto; height: auto; object-fit: contain; }
+
+        .slide-content {
+            position: absolute; top: var(--header-height); left: 0; width: 100%; 
+            height: calc(100% - var(--header-height) - var(--footer-buffer));
+            box-sizing: border-box;
+            display: flex; flex-direction: column; justify-content: center; align-items: flex-start; 
+            padding-left: var(--content-padding); padding-right: var(--content-padding);
+            font-family: 'Georgia', serif; color: #111; line-height: 1.5; text-align: left;
+            overflow-wrap: break-word; overflow: hidden;
+        }
+        
+        .slide-content p { margin: 0 0 20px 0; width: 100%; }
+        .slide-content p:last-child { margin-bottom: 0; }
+
+        .dm-bold { font-weight: 900; }
+        .dm-italic { font-style: italic; }
+
+        .drop-cap {
+            float: left; font-size: 3em; line-height: 0.8; padding-right: 10px; padding-top: 10px; color: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>Master Generator</h2>
+
+        <details open>
+            <summary>Cover Settings (Canvas)</summary>
+            
+            <div style="margin-top: 10px;">
+                <label>1. Template Theme</label>
+                <select id="templateSelect" onchange="changeTemplate()">
+                    <option value="red_3.png">Red Theme (3 Dots)</option>
+                    <option value="red_4.png">Red Theme (4 Dots)</option>
+                    <option value="white_3.png">White Theme (3 Dots)</option>
+                    <option value="white_4.png">White Theme (4 Dots)</option>
+                </select>
+            </div>
+
+            <div style="margin-top: 10px;">
+                <label>2. Cover Photo (1080x843)</label>
+                <input type="file" id="coverImgInput" accept="image/*" style="display:none" onchange="loadCoverImage(this)">
+                <div class="file-upload-btn" onclick="document.getElementById('coverImgInput').click()">
+                    Click to Upload Cover Photo
+                </div>
+            </div>
+
+            <div style="margin-top: 10px;">
+                <label>3. Headline Size (px)</label>
+                <div class="input-row">
+                    <input type="range" id="fontSizeRange" min="20" max="120" value="60" oninput="syncFontSize('range')">
+                    <input type="number" id="fontSizeNum" min="20" max="120" value="60" oninput="syncFontSize('num')">
+                </div>
+            </div>
+
+            <div style="margin-top: 10px;">
+                <label>4. Line Height (Multiplier)</label>
+                <input type="range" id="lineHeightMult" min="0.8" max="2.0" step="0.1" value="1.2" oninput="drawCanvas()">
+            </div>
+            
+            <div class="input-row" style="margin-top: 10px;">
+                <input type="checkbox" id="debugBox" onchange="drawCanvas()">
+                <label for="debugBox" style="margin:0;">Show Debug Box</label>
+            </div>
+        </details>
+
+        <div class="control-group">
+            <label>Article Text (Line 1 = Headline)</label>
+            <input type="file" id="fileInput" accept=".txt" style="display: none;" onchange="loadTextFile(this)">
+            <button id="btn-file" onclick="document.getElementById('fileInput').click()">📂 Load .txt File</button>
+            <textarea id="inputText" oninput="handleInputUpdate()">BREAKING NEWS: A Third Zulu Man Has Been Found In Ibiza
+:::bundle
+After decades of speculation and billions spent in taxpayer money, researchers have finally confirmed the existence of a third Zulu man in Ibiza.
+:::end
+:::bundle
+The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate their achievements.
+:::end</textarea>
+        </div>
+
+        <details>
+            <summary>Slide Layout (HTML)</summary>
+            <div style="margin-top: 15px;">
+                <label>Header Height (px)</label>
+                <div class="input-row">
+                    <input type="range" id="range-head" min="50" max="400" value="107" 
+                           oninput="syncValues(this, 'num-head', '--header-height')">
+                    <input type="number" id="num-head" min="50" max="400" value="107" 
+                           oninput="syncValues(this, 'range-head', '--header-height')">
+                </div>
+            </div>
+            <div style="margin-top: 15px;">
+                <label>Side Padding (px)</label>
+                <div class="input-row">
+                    <input type="range" id="range-side" min="20" max="200" value="20" 
+                           oninput="syncValues(this, 'num-side', '--content-padding')">
+                    <input type="number" id="num-side" min="20" max="200" value="20" 
+                           oninput="syncValues(this, 'range-side', '--content-padding')">
+                </div>
+            </div>
+        </details>
+
+        <button id="btn-gen" onclick="handleInputUpdate()">1. Update Preview</button>
+        <button id="btn-dl" onclick="downloadAll()">2. Download All as ZIP</button>
+    </div>
+
+    <div id="preview-stage">
+        <div style="text-align:center; color:#ccc; font-weight:bold; margin-bottom:-40px;">COVER PREVIEW</div>
+        <canvas id="cover-canvas" width="1080" height="1350"></canvas>
+        
+        <div style="text-align:center; color:#ccc; font-weight:bold; margin-top:20px;">SLIDES PREVIEW</div>
+        <div id="slides-container" style="display:flex; flex-direction:column; gap:50px; align-items:center;"></div>
+    </div>
+
+<script>
+    // --- CONSTANTS ---
+    const ASSET_LOGO_PATH = "assets/header_logo.png";
+    const BOX_X = 33;
+    const BOX_Y = 892;
+    const BOX_W = 1047 - 33; 
+    const BOX_H = 1231 - 892;
+
+    // --- STATE VARIABLES ---
+    let templateImg = new Image();
+    let coverUserImg = new Image();
+    let assetsLoaded = false;
+    const canvas = document.getElementById('cover-canvas');
+    const ctx = canvas.getContext('2d');
+
+    // --- INITIALIZATION ---
+    window.onload = function() {
+        changeTemplate(); // Load default template
+        handleInputUpdate(); // Generate initial view
+    };
+
+    // --- CORE HANDLER: Updates both Canvas and Slides ---
+    function handleInputUpdate() {
+        drawCanvas();
+        generateSlides();
+    }
+
+    // --- SECTION 1: CANVAS LOGIC (COVER) ---
+
+    function changeTemplate() {
+        const selectedFile = document.getElementById('templateSelect').value;
+        const path = "assets/" + selectedFile;
+        assetsLoaded = false;
+        templateImg = new Image();
+        templateImg.src = path;
+        templateImg.onload = () => {
+            assetsLoaded = true;
+            drawCanvas();
+        };
+        templateImg.onerror = () => alert("Error: Could not load " + path);
+    }
+
+    function loadCoverImage(input) {
+        const file = input.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            coverUserImg = new Image();
+            coverUserImg.onload = drawCanvas;
+            coverUserImg.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function syncFontSize(source) {
+        const range = document.getElementById('fontSizeRange');
+        const num = document.getElementById('fontSizeNum');
+        if (source === 'range') num.value = range.value;
+        else range.value = num.value;
+        drawCanvas();
+    }
+
+    function wrapText(context, text, x, y, maxWidth, maxHeight, lineHeight) {
+        const paragraphs = text.split('\n');
+        const centerX = x + (maxWidth / 2);
+        let currentY = y; 
+
+        for (let p = 0; p < paragraphs.length; p++) {
+            const words = paragraphs[p].split(' ');
+            let line = '';
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = context.measureText(testLine);
+                if (metrics.width > maxWidth && n > 0) {
+                    context.fillText(line, centerX, currentY);
+                    line = words[n] + ' ';
+                    currentY += lineHeight;
+                } else {
+                    line = testLine;
+                }
+            }
+            context.fillText(line, centerX, currentY);
+            currentY += lineHeight;
+        }
+    }
+
+    function drawCanvas() {
+        // 1. Clear
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 2. Draw User Image (Bottom Layer)
+        if (coverUserImg.src) {
+            ctx.drawImage(coverUserImg, 0, 0, 1080, 843);
+        } else {
+            // Placeholder gray if no image
+            ctx.fillStyle = "#444"; ctx.fillRect(0,0,1080,843);
+            ctx.fillStyle = "#666"; ctx.font = "40px sans-serif"; ctx.textAlign="center";
+            ctx.fillText("Upload Cover Photo", 540, 420);
+        }
+
+        // 3. Draw Template (Middle Layer)
+        if (assetsLoaded) {
+            ctx.drawImage(templateImg, 0, 0, 1080, 1350);
+        }
+
+        // 4. Draw Text (Headline from Line 1)
+        const fullText = document.getElementById('inputText').value;
+        const headline = fullText.split('\n')[0]; // GET FIRST LINE
+
+        const fontSize = parseInt(document.getElementById('fontSizeNum').value);
+        const multiplier = parseFloat(document.getElementById('lineHeightMult').value);
+        const lineHeight = fontSize * multiplier;
+
+        // Auto-Color Logic
+        const currentTemplate = document.getElementById('templateSelect').value;
+        ctx.fillStyle = currentTemplate.includes('red') ? "white" : "black";
+
+        ctx.font = `${fontSize}px Georgia`;
+        ctx.textBaseline = 'top'; 
+        ctx.textAlign = "center"; 
+
+        // Debug Box
+        if (document.getElementById('debugBox').checked) {
+            ctx.strokeStyle = "green"; ctx.lineWidth = 5;
+            ctx.strokeRect(BOX_X, BOX_Y, BOX_W, BOX_H);
+        }
+
+        wrapText(ctx, headline, BOX_X, BOX_Y, BOX_W, BOX_H, lineHeight);
+    }
+
+    // --- SECTION 2: HTML SLIDE LOGIC ---
+
+    function loadTextFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('inputText').value = e.target.result;
+            handleInputUpdate();
+        };
+        reader.readAsText(file);
+    }
+
+    function syncValues(source, targetId, varName) {
+        document.getElementById(targetId).value = source.value;
+        document.documentElement.style.setProperty(varName, source.value + "px");
+    }
+
+    function generateSlides() {
+        const container = document.getElementById('slides-container');
+        const rawText = document.getElementById('inputText').value;
+        container.innerHTML = ''; 
+
+        const matches = rawText.matchAll(/:::bundle([\s\S]*?):::end/g);
+        let count = 0;
+
+        for (const match of matches) {
+            let content = match[1].trim();
+            content = content.replace(/#(.*?)#/g, '<span class="dm-bold">$1</span>');
+            content = content.replace(/__(.*?)__/g, '<span class="dm-italic">$1</span>');
+            
+            let paragraphs = content.split('\n').filter(p => p.trim() !== '');
+            
+            if (count === 0 && paragraphs.length > 0) {
+                let firstP = paragraphs[0];
+                let firstChar = firstP.charAt(0);
+                let rest = firstP.slice(1);
+                paragraphs[0] = `<span class="drop-cap">${firstChar}</span>${rest}`;
+            }
+
+            const finalHtml = paragraphs.map(p => `<p>${p}</p>`).join('');
+
+            const slide = document.createElement('div');
+            slide.className = 'slide slide-html'; // Marker class
+
+            // Header
+            const header = document.createElement('div');
+            header.className = 'slide-header';
+            const img = document.createElement('img');
+            img.src = ASSET_LOGO_PATH;
+            img.className = 'header-logo';
+            img.onerror = function() { this.style.display='none'; };
+            header.appendChild(img);
+            slide.appendChild(header);
+
+            // Body
+            const bodyDiv = document.createElement('div');
+            bodyDiv.className = 'slide-content';
+            bodyDiv.innerHTML = finalHtml;
+            slide.appendChild(bodyDiv);
+
+            container.appendChild(slide);
+
+            // Auto-Scale
+            let fontSize = 85; 
+            bodyDiv.style.fontSize = fontSize + "px";
+            while (bodyDiv.scrollHeight > bodyDiv.clientHeight && fontSize > 20) {
+                fontSize--;
+                bodyDiv.style.fontSize = fontSize + "px";
+            }
+            count++;
+        }
+    }
+
+    // --- SECTION 3: DOWNLOAD LOGIC (ZIP) ---
+
+    async function captureHtmlSlide(element) {
+        // Clone to render off-screen without scale transform
+        const clone = element.cloneNode(true);
+        clone.style.transform = "none"; 
+        clone.style.margin = "0";
+        clone.style.position = "fixed"; top="0"; left="0"; zIndex="-9999";
+        document.body.appendChild(clone);
+        await new Promise(r => setTimeout(r, 200));
+
+        const canvas = await html2canvas(clone, {
+            scale: 1, width: 1080, height: 1350, useCORS: true, backgroundColor: "#ffffff"
+        });
+        document.body.removeChild(clone);
+        return new Promise(resolve => canvas.toBlob(resolve));
+    }
+
+    async function downloadAll() {
+        const btn = document.getElementById('btn-dl');
+        btn.innerText = "Generating ZIP...";
+        
+        const zip = new JSZip();
+        
+        // 1. Filename Setup
+        const rawText = document.getElementById('inputText').value;
+        const headline = rawText.split('\n')[0].trim() || "Daily_Malarkey";
+        const safeFilename = headline.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+
+        // 2. Add Cover (Canvas)
+        const coverBlob = await new Promise(resolve => canvas.toBlob(resolve));
+        zip.file("00_Cover.png", coverBlob);
+
+        // 3. Add Slides (HTML)
+        const slides = document.querySelectorAll('.slide-html');
+        for (let i = 0; i < slides.length; i++) {
+            const blob = await captureHtmlSlide(slides[i]);
+            zip.file(`Slide_${i + 1}.png`, blob);
+        }
+
+        // 4. Save
+        zip.generateAsync({type:"blob"}).then(function(content) {
+            saveAs(content, `${safeFilename}.zip`);
+            btn.innerText = "2. Download All as ZIP";
+        });
+    }
+</script>
+</body>
+</html>

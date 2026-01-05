@@ -2,42 +2,76 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Layering Test Tool</title>
+    <title>Multi-Template Wrapper</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         body { font-family: sans-serif; background: #333; color: white; display: flex; gap: 20px; padding: 20px; }
         
-        /* CONTROLS (Left) */
         #controls { width: 300px; display: flex; flex-direction: column; gap: 15px; }
-        input, button { padding: 10px; border-radius: 4px; border: none; }
-        button { cursor: pointer; font-weight: bold; background: #eee; color: #333; }
+        input, button, textarea, select { padding: 10px; border-radius: 4px; border: none; width: 100%; box-sizing: border-box; }
+        textarea { height: 100px; resize: vertical; }
+        button { cursor: pointer; font-weight: bold; background: #eee; color: #333; margin-top: 10px;}
         button:hover { background: #fff; }
         label { font-size: 12px; font-weight: bold; color: #aaa; margin-bottom: 5px; display: block;}
+        
+        .input-row { display: flex; gap: 10px; align-items: center; }
+        input[type="range"] { flex: 1; cursor: pointer; }
+        input[type="number"] { width: 70px; text-align: center; } 
+        input[type="checkbox"] { width: auto; }
 
-        /* PREVIEW (Right) */
-        #canvas-container { border: 2px solid #555; height: 675px; /* Half size preview */ }
+        details { background: #444; padding: 10px; border-radius: 4px; }
+        summary { cursor: pointer; font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #ddd; }
+
+        #canvas-container { border: 2px solid #555; height: 675px; }
         canvas { height: 100%; width: auto; display: block; background: #000; }
     </style>
 </head>
 <body>
 
     <div id="controls">
-        <h2>Layering Test</h2>
+        <h2>Template Builder</h2>
         
         <div>
-            <label>1. User Overlay Image (1080x843)</label>
+            <label>1. Select Template</label>
+            <select id="templateSelect" onchange="changeTemplate()">
+                <option value="red_3.png">Red Theme (3 Dots)</option>
+                <option value="red_4.png">Red Theme (4 Dots)</option>
+                <option value="white_3.png">White Theme (3 Dots)</option>
+                <option value="white_4.png">White Theme (4 Dots)</option>
+            </select>
+        </div>
+
+        <div>
+            <label>2. Overlay Image</label>
             <input type="file" id="userImgInput" accept="image/*">
         </div>
 
         <div>
-            <label>2. Text Overlay</label>
-            <input type="text" id="userText" placeholder="Enter headline..." value="TEST HEADLINE">
+            <label>3. Text Content</label>
+            <textarea id="userText" placeholder="Type here...">This is a sample sentence to test the dynamic color switching based on your template selection.</textarea>
         </div>
 
         <div>
-            <label>3. Vertical Position of User Image (Y-Axis)</label>
-            <input type="range" id="imgY" min="0" max="1350" value="250">
+            <label>Font Size (px)</label>
+            <div class="input-row">
+                <input type="range" id="fontSizeRange" min="20" max="120" value="60" oninput="syncFontSize('range')">
+                <input type="number" id="fontSizeNum" min="20" max="120" value="60" oninput="syncFontSize('num')">
+            </div>
         </div>
+
+        <details>
+            <summary>Advanced Tools</summary>
+            
+            <div style="margin-top: 10px;">
+                <label>Line Height (Multiplier)</label>
+                <input type="range" id="lineHeightMult" min="0.8" max="2.0" step="0.1" value="1.2">
+            </div>
+
+            <div class="row" style="margin-top: 10px;">
+                <input type="checkbox" id="debugBox">
+                <label for="debugBox" style="margin:0; color: white;">Show Debug Box</label>
+            </div>
+        </details>
 
         <button onclick="drawCanvas()">Update Preview</button>
         <button onclick="downloadCanvas()" style="background: #4CAF50; color: white;">Download Image</button>
@@ -48,10 +82,12 @@
     </div>
 
 <script>
-    // CONFIGURATION
-    const ASSET_TEMPLATE_PATH = "assets/red_3.png"; 
-    
-    // VARIABLES
+    // COORDINATES (Same for all templates)
+    const BOX_X = 33;
+    const BOX_Y = 892;
+    const BOX_W = 1047 - 33; 
+    const BOX_H = 1231 - 892;
+
     const canvas = document.getElementById('previewCanvas');
     const ctx = canvas.getContext('2d');
     
@@ -59,74 +95,131 @@
     let userImg = new Image();
     let assetsLoaded = false;
 
-    // 1. INITIALIZE
-    // Load the base template immediately on startup
+    // Initialize with default selection
     window.onload = function() {
-        templateImg.src = ASSET_TEMPLATE_PATH;
-        templateImg.onload = () => {
-            assetsLoaded = true;
-            drawCanvas(); // Draw background immediately
-        };
-        templateImg.onerror = () => alert("Error: assets/template.png not found!");
+        changeTemplate(); 
     };
 
-    // 2. HANDLE USER IMAGE UPLOAD
+    // --- CHANGE TEMPLATE FUNCTION ---
+    function changeTemplate() {
+        const selectedFile = document.getElementById('templateSelect').value;
+        const path = "assets/" + selectedFile;
+        
+        assetsLoaded = false;
+        templateImg = new Image();
+        templateImg.src = path;
+        
+        templateImg.onload = () => {
+            assetsLoaded = true;
+            drawCanvas();
+        };
+        
+        templateImg.onerror = () => {
+            alert("Error: Could not load " + path);
+        };
+    }
+
+    function syncFontSize(source) {
+        const range = document.getElementById('fontSizeRange');
+        const num = document.getElementById('fontSizeNum');
+        if (source === 'range') num.value = range.value;
+        else range.value = num.value;
+        drawCanvas();
+    }
+
+    // Input Handlers
     document.getElementById('userImgInput').onchange = function(e) {
         const file = e.target.files[0];
         if(!file) return;
-        
         const reader = new FileReader();
         reader.onload = function(event) {
             userImg = new Image();
-            userImg.onload = drawCanvas; // Redraw when loaded
+            userImg.onload = drawCanvas;
             userImg.src = event.target.result;
         };
         reader.readAsDataURL(file);
     };
 
-    // 3. HANDLE SLIDER & TEXT UPDATES
-    document.getElementById('imgY').oninput = drawCanvas;
     document.getElementById('userText').oninput = drawCanvas;
+    document.getElementById('lineHeightMult').oninput = drawCanvas;
+    document.getElementById('debugBox').onchange = drawCanvas;
 
-    // 4. THE COMPOSITING LOGIC
-    function drawCanvas() {
-        // A. Clear Canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function wrapText(context, text, x, y, maxWidth, maxHeight, lineHeight) {
+        const paragraphs = text.split('\n');
+        const centerX = x + (maxWidth / 2);
+        let currentY = y; 
 
-        // B. Draw Base Template (Bottom Layer)
-        if (assetsLoaded) {
-            ctx.drawImage(templateImg, 0, 0, 1080, 1350);
-        }
+        for (let p = 0; p < paragraphs.length; p++) {
+            const words = paragraphs[p].split(' ');
+            let line = '';
 
-        // C. Draw User Image (Middle Layer)
-        // Only draw if user has uploaded something
-        if (userImg.src) {
-            const yPos = parseInt(document.getElementById('imgY').value);
-            // Draw image at 1080 width, maintaining aspect ratio or forcing height
-            // Here we force the requested 1080x843 for consistency
-            ctx.drawImage(userImg, 0, yPos, 1080, 843);
-        }
+            for (let n = 0; n < words.length; n++) {
+                const testLine = line + words[n] + ' ';
+                const metrics = context.measureText(testLine);
+                const testWidth = metrics.width;
 
-        // D. Draw Text (Top Layer)
-        const text = document.getElementById('userText').value;
-        if (text) {
-            ctx.fillStyle = "white"; // Text Color
-            ctx.font = "bold 80px Georgia"; // Font Style
-            ctx.textAlign = "center";
-            ctx.shadowColor = "rgba(0,0,0,0.8)"; // Drop shadow for readability
-            ctx.shadowBlur = 10;
-            ctx.shadowOffsetX = 4;
-            ctx.shadowOffsetY = 4;
-            
-            // Position text (e.g., near bottom)
-            ctx.fillText(text, canvas.width / 2, 1200);
+                if (testWidth > maxWidth && n > 0) {
+                    context.fillText(line, centerX, currentY);
+                    line = words[n] + ' ';
+                    currentY += lineHeight;
+                }
+                else {
+                    line = testLine;
+                }
+            }
+            context.fillText(line, centerX, currentY);
+            currentY += lineHeight;
         }
     }
 
-    // 5. DOWNLOAD
+    function drawCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 1. Draw Template
+        if (assetsLoaded) {
+            ctx.drawImage(templateImg, 0, 0, 1080, 1350);
+        } else {
+            ctx.fillStyle = "#333"; ctx.fillRect(0,0,1080,1350); 
+        }
+
+        // 2. Draw User Image
+        if (userImg.src) {
+            ctx.drawImage(userImg, 0, 0, 1080, 843);
+        }
+
+        // 3. Text Configuration (Auto-Color Logic)
+        const fontSize = parseInt(document.getElementById('fontSizeNum').value);
+        const multiplier = parseFloat(document.getElementById('lineHeightMult').value);
+        const lineHeight = fontSize * multiplier;
+        
+        // --- COLOR LOGIC ---
+        const currentTemplate = document.getElementById('templateSelect').value;
+        if (currentTemplate.includes('red')) {
+            ctx.fillStyle = "white"; 
+        } else {
+            ctx.fillStyle = "black"; 
+        }
+
+        ctx.font = `${fontSize}px Georgia`;
+        ctx.textBaseline = 'top'; 
+        ctx.textAlign = "center"; 
+
+        const text = document.getElementById('userText').value;
+
+        // 4. Debug Box
+        if (document.getElementById('debugBox').checked) {
+            ctx.strokeStyle = "green";
+            ctx.lineWidth = 5;
+            ctx.strokeRect(BOX_X, BOX_Y, BOX_W, BOX_H);
+        }
+
+        // 5. Execute Wrap
+        wrapText(ctx, text, BOX_X, BOX_Y, BOX_W, BOX_H, lineHeight);
+    }
+
     function downloadCanvas() {
         canvas.toBlob(function(blob) {
-            saveAs(blob, "composited_image.png");
+            saveAs(blob, "final_template.png");
         });
     }
 </script>
