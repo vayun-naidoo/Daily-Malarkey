@@ -1,17 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
-    <title>Daily Malarkey - Master Generator</title>
+    <title>Official Malarkey Generator</title>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <style>
+        #coverHeadlineInput:focus {
+            background-color: #fffde7;
+            /* Light Yellow */
+            border: 2px solid #fdd835;
+            outline: none;
+        }
+
         :root {
-            --header-height: 107px;      
-            --content-padding: 20px;     
-            --footer-buffer: 20px;       
+            --header-height: 107px;
+            --content-padding: 20px;
+            --footer-buffer: 20px;
         }
 
         body {
@@ -30,14 +39,25 @@
             display: flex;
             flex-direction: column;
             gap: 15px;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
             z-index: 100;
             overflow-y: auto;
         }
 
-        .control-group { background: #f4f4f4; padding: 10px; border-radius: 6px; }
-        label { font-size: 12px; font-weight: bold; color: #666; display: block; margin-bottom: 5px; }
-        
+        .control-group {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+            display: block;
+            margin-bottom: 5px;
+        }
+
         details {
             background: #eee;
             border-radius: 6px;
@@ -45,7 +65,7 @@
             border: 1px solid #ddd;
             margin-bottom: 10px;
         }
-        
+
         summary {
             font-size: 14px;
             font-weight: bold;
@@ -55,28 +75,109 @@
             justify-content: space-between;
             align-items: center;
         }
-        
-        summary::after { content: '+'; font-weight: bold; }
-        details[open] summary::after { content: '-'; }
 
-        .input-row { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
-        input[type="range"] { flex: 1; cursor: pointer; }
-        input[type="number"] { width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; text-align: center; }
-        input[type="checkbox"] { width: auto; }
-        select { width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        summary::after {
+            content: '+';
+            font-weight: bold;
+        }
 
-        textarea { width: 100%; height: 200px; padding: 10px; box-sizing: border-box; font-family: monospace; }
-        
-        button { padding: 15px; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; transition: 0.2s; }
-        button:hover { opacity: 0.9; }
-        
-        #btn-file { background-color: #444; color: white; width: 100%; margin-bottom: 10px; padding: 10px;}
-        #btn-gen { background-color: #111; color: white; margin-top: auto;}
-        #btn-dl { background-color: #aa0000; color: white; }
+        details[open] summary::after {
+            content: '-';
+        }
 
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            cursor: pointer;
+        }
+
+        input[type="number"] {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        input[type="checkbox"] {
+            width: auto;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+
+        /* Specific style for the smaller headline box */
+        #coverHeadlineInput {
+            height: 80px;
+            font-family: 'Georgia', serif;
+        }
+
+        button {
+            padding: 15px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #btn-file {
+            background-color: #444;
+            color: white;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+        }
+
+        #btn-dl {
+            background-color: #aa0000;
+            color: white;
+            margin-top: auto;
+        }
+
+        /* UPLOAD BUTTON & DRAG STYLE */
         .file-upload-btn {
-            background: #ddd; border: 1px dashed #999; width: 100%; padding: 10px; 
-            text-align: center; cursor: pointer; box-sizing: border-box; font-size: 12px;
+            background: #ddd;
+            border: 2px dashed #999;
+            width: 100%;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            box-sizing: border-box;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .file-upload-btn:hover {
+            background: #ccc;
+        }
+
+        .drag-active {
+            background-color: #b3e5fc !important;
+            border-color: #039be5 !important;
+            color: #0277bd;
         }
 
         /* PREVIEW AREA */
@@ -86,16 +187,16 @@
             padding: 40px;
             overflow: auto;
             display: flex;
-            flex-direction: column; /* Stack cover on top of slides */
+            flex-direction: column;
             align-items: center;
             gap: 50px;
         }
 
         /* CANVAS STYLE */
         #cover-canvas {
-            width: 540px; /* Display at half size */
+            width: 540px;
             height: 675px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
             background: white;
         }
 
@@ -107,52 +208,91 @@
             position: relative;
             flex-shrink: 0;
             overflow: hidden;
-            transform: scale(0.5); /* Preview scale */
+            transform: scale(0.5);
             transform-origin: top center;
-            margin-bottom: -675px; /* Adjust for scale */
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            margin-bottom: -675px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
         }
 
         .slide-header {
-            position: absolute; top: 0; left: 0; width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
             height: var(--header-height);
             background-color: white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
             z-index: 20;
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .header-logo { max-width: 98%; max-height: 98%; width: auto; height: auto; object-fit: contain; }
+        .header-logo {
+            max-width: 98%;
+            max-height: 98%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
 
         .slide-content {
-            position: absolute; top: var(--header-height); left: 0; width: 100%; 
+            position: absolute;
+            top: var(--header-height);
+            left: 0;
+            width: 100%;
             height: calc(100% - var(--header-height) - var(--footer-buffer));
             box-sizing: border-box;
-            display: flex; flex-direction: column; justify-content: center; align-items: flex-start; 
-            padding-left: var(--content-padding); padding-right: var(--content-padding);
-            font-family: 'Georgia', serif; color: #111; line-height: 1.5; text-align: left;
-            overflow-wrap: break-word; overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            padding-left: var(--content-padding);
+            padding-right: var(--content-padding);
+            font-family: 'Georgia', serif;
+            color: #111;
+            line-height: 1.5;
+            text-align: left;
+            overflow-wrap: break-word;
+            overflow: hidden;
         }
-        
-        .slide-content p { margin: 0 0 20px 0; width: 100%; }
-        .slide-content p:last-child { margin-bottom: 0; }
 
-        .dm-bold { font-weight: 900; }
-        .dm-italic { font-style: italic; }
+        .slide-content p {
+            margin: 0 0 20px 0;
+            width: 100%;
+        }
+
+        .slide-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .dm-bold {
+            font-weight: 900;
+        }
+
+        .dm-italic {
+            font-style: italic;
+        }
 
         .drop-cap {
-            float: left; font-size: 3em; line-height: 0.8; padding-right: 10px; padding-top: 10px; color: #000;
+            float: left;
+            font-size: 3em;
+            line-height: 0.8;
+            padding-right: 10px;
+            padding-top: 10px;
+            color: #000;
         }
     </style>
 </head>
+
 <body>
 
     <div id="sidebar">
-        <h2>Master Generator</h2>
+        <h2>Malarkey Generator</h2>
 
         <details open>
             <summary>Cover Settings (Canvas)</summary>
-            
+
             <div style="margin-top: 10px;">
                 <label>1. Template Theme</label>
                 <select id="templateSelect" onchange="changeTemplate()">
@@ -165,25 +305,34 @@
 
             <div style="margin-top: 10px;">
                 <label>2. Cover Photo (1080x843)</label>
-                <input type="file" id="coverImgInput" accept="image/*" style="display:none" onchange="loadCoverImage(this)">
-                <div class="file-upload-btn" onclick="document.getElementById('coverImgInput').click()">
-                    Click to Upload Cover Photo
+                <input type="file" id="coverImgInput" accept="image/*" style="display:none"
+                    onchange="loadCoverImage(this.files[0])">
+                <div id="drop-cover" class="file-upload-btn" onclick="document.getElementById('coverImgInput').click()">
+                    Click or Drag Cover Photo Here
                 </div>
             </div>
 
             <div style="margin-top: 10px;">
-                <label>3. Headline Size (px)</label>
+                <label>3. Cover Headline (Edit Independently)</label>
+                <textarea id="coverHeadlineInput"
+                    oninput="drawCanvas()">Headline</textarea>
+            </div>
+
+            <div style="margin-top: 10px;">
+                <label>4. Headline Size (px)</label>
                 <div class="input-row">
-                    <input type="range" id="fontSizeRange" min="20" max="120" value="60" oninput="syncFontSize('range')">
-                    <input type="number" id="fontSizeNum" min="20" max="120" value="60" oninput="syncFontSize('num')">
+                    <input type="range" id="fontSizeRange" min="20" max="150" value="60"
+                        oninput="syncFontSize('range')">
+                    <input type="number" id="fontSizeNum" min="20" max="150" value="60" oninput="syncFontSize('num')">
                 </div>
             </div>
 
             <div style="margin-top: 10px;">
-                <label>4. Line Height (Multiplier)</label>
-                <input type="range" id="lineHeightMult" min="0.8" max="2.0" step="0.1" value="1.2" oninput="drawCanvas()">
+                <label>5. Line Height (Multiplier)</label>
+                <input type="range" id="lineHeightMult" min="0.8" max="2.0" step="0.1" value="1.2"
+                    oninput="drawCanvas()">
             </div>
-            
+
             <div class="input-row" style="margin-top: 10px;">
                 <input type="checkbox" id="debugBox" onchange="drawCanvas()">
                 <label for="debugBox" style="margin:0;">Show Debug Box</label>
@@ -191,15 +340,30 @@
         </details>
 
         <div class="control-group">
-            <label>Article Text (Line 1 = Headline)</label>
-            <input type="file" id="fileInput" accept=".txt" style="display: none;" onchange="loadTextFile(this)">
-            <button id="btn-file" onclick="document.getElementById('fileInput').click()">📂 Load .txt File</button>
-            <textarea id="inputText" oninput="handleInputUpdate()">BREAKING NEWS: A Third Zulu Man Has Been Found In Ibiza
+            <label>Article Text (:::bundle for new slide)</label>
+
+            <input type="file" id="fileInput" accept=".txt" style="display: none;"
+                onchange="loadTextFile(this.files[0])">
+            <div id="drop-text" class="file-upload-btn"
+                style="margin-bottom:10px; background:#f4f4f4; border-color:#bbb;"
+                onclick="document.getElementById('fileInput').click()">
+                📂 Click or Drag .txt File Here
+            </div>
+
+            <textarea id="inputText" oninput="generateSlides()">Headline
 :::bundle
-After decades of speculation and billions spent in taxpayer money, researchers have finally confirmed the existence of a third Zulu man in Ibiza.
-:::end
+This is the first bundle. Check out the text to see how bundling works. See the next slide for text formatting. 
+
+Also, the first letter of this slide has a drop cap. That is only for this slide.
+
+The headline works by taking whatever the first line of the main text is, and replicating it in the headline box above it. This new headline can be formatted independently (for the sake of the front page) and always listens to whatever is in the headline (first line) space of the main text. Play around and see what happens when you change the main text box, and the headline text box.:::end
 :::bundle
-The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate their achievements.
+This is the second slide. Notice how this is #bold# and this is __italic__. Again, see the text to see how this is done.
+
+Do not forget - every article must end with a bold tag shown below.
+
+This is the final sentence of the second slide. #DM#
+__Notice how the sentence ends with a full stop, then a space, then the bold tag.__
 :::end</textarea>
         </div>
 
@@ -208,31 +372,30 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
             <div style="margin-top: 15px;">
                 <label>Header Height (px)</label>
                 <div class="input-row">
-                    <input type="range" id="range-head" min="50" max="400" value="107" 
-                           oninput="syncValues(this, 'num-head', '--header-height')">
-                    <input type="number" id="num-head" min="50" max="400" value="107" 
-                           oninput="syncValues(this, 'range-head', '--header-height')">
+                    <input type="range" id="range-head" min="50" max="400" value="107"
+                        oninput="syncValues(this, 'num-head', '--header-height')">
+                    <input type="number" id="num-head" min="50" max="400" value="107"
+                        oninput="syncValues(this, 'range-head', '--header-height')">
                 </div>
             </div>
             <div style="margin-top: 15px;">
                 <label>Side Padding (px)</label>
                 <div class="input-row">
-                    <input type="range" id="range-side" min="20" max="200" value="20" 
-                           oninput="syncValues(this, 'num-side', '--content-padding')">
-                    <input type="number" id="num-side" min="20" max="200" value="20" 
-                           oninput="syncValues(this, 'range-side', '--content-padding')">
+                    <input type="range" id="range-side" min="20" max="200" value="20"
+                        oninput="syncValues(this, 'num-side', '--content-padding')">
+                    <input type="number" id="num-side" min="20" max="200" value="20"
+                        oninput="syncValues(this, 'range-side', '--content-padding')">
                 </div>
             </div>
         </details>
 
-        <button id="btn-gen" onclick="handleInputUpdate()">1. Update Preview</button>
-        <button id="btn-dl" onclick="downloadAll()">2. Download All as ZIP</button>
+        <button id="btn-dl" onclick="downloadAll()">Download All as ZIP</button>
     </div>
 
     <div id="preview-stage">
         <div style="text-align:center; color:#ccc; font-weight:bold; margin-bottom:-40px;">COVER PREVIEW</div>
         <canvas id="cover-canvas" width="1080" height="1350"></canvas>
-        
+
         <div style="text-align:center; color:#ccc; font-weight:bold; margin-top:20px;">SLIDES PREVIEW</div>
         <div id="slides-container" style="display:flex; flex-direction:column; gap:50px; align-items:center;"></div>
     </div>
@@ -254,17 +417,95 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
 
     // --- INITIALIZATION ---
     window.onload = function() {
-        changeTemplate(); // Load default template
-        handleInputUpdate(); // Generate initial view
+        // 1. Load Defaults
+        changeTemplate(); 
+        
+        // 2. Setup DOM Elements
+        const headlineInput = document.getElementById('coverHeadlineInput');
+        const articleInput = document.getElementById('inputText');
+        const lineMultInput = document.getElementById('lineHeightMult');
+        const fontSizeNum = document.getElementById('fontSizeNum');
+        const fontSizeRange = document.getElementById('fontSizeRange');
+        const debugBox = document.getElementById('debugBox');
+
+        // --- THE CRITICAL FIX: SYNC LOGIC ---
+        
+        // A. If you type in the HEADLINE box -> Just update the Canvas
+        headlineInput.addEventListener('input', function() {
+            drawCanvas();
+        });
+
+        // B. If you type in the MAIN BODY -> Update Slides AND Overwrite Headline
+        articleInput.addEventListener('input', function() {
+            // 1. Regenerate HTML Slides
+            generateSlides();
+
+            // 2. FORCE Overwrite Headline Box with First Line
+            const firstLine = this.value.split('\n')[0];
+            headlineInput.value = firstLine;
+
+            // 3. Redraw Canvas to match
+            drawCanvas();
+        });
+
+        // Controls
+        lineMultInput.addEventListener('input', drawCanvas);
+        debugBox.addEventListener('change', drawCanvas);
+        
+        // Font Size Sync
+        fontSizeRange.addEventListener('input', function() {
+            fontSizeNum.value = this.value;
+            drawCanvas();
+        });
+        fontSizeNum.addEventListener('input', function() {
+            fontSizeRange.value = this.value;
+            drawCanvas();
+        });
+
+        // 3. Setup Drag & Drop
+        setupDragAndDrop('drop-cover', loadCoverImage);
+        setupDragAndDrop('drop-text', loadTextFile);
+
+        // 4. Initial Render
+        refreshAll();
     };
 
-    // --- CORE HANDLER: Updates both Canvas and Slides ---
-    function handleInputUpdate() {
+    function refreshAll() {
+        // Manually sync the headline box on first load
+        const rawText = document.getElementById('inputText').value;
+        if (rawText) {
+            document.getElementById('coverHeadlineInput').value = rawText.split('\n')[0];
+        }
         drawCanvas();
         generateSlides();
     }
 
-    // --- SECTION 1: CANVAS LOGIC (COVER) ---
+    // --- HELPER FUNCTIONS ---
+
+    function setupDragAndDrop(elementId, callback) {
+        const dropZone = document.getElementById(elementId);
+        
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault(); e.stopPropagation();
+            }, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-active'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) callback(files[0]);
+        }, false);
+    }
+
+    // --- COVER LOGIC ---
 
     function changeTemplate() {
         const selectedFile = document.getElementById('templateSelect').value;
@@ -276,30 +517,23 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
             assetsLoaded = true;
             drawCanvas();
         };
-        templateImg.onerror = () => alert("Error: Could not load " + path);
+        templateImg.onerror = () => console.log("Template loading..."); 
     }
 
-    function loadCoverImage(input) {
-        const file = input.files[0];
+    function loadCoverImage(file) {
         if(!file) return;
         const reader = new FileReader();
         reader.onload = function(event) {
             coverUserImg = new Image();
             coverUserImg.onload = drawCanvas;
             coverUserImg.src = event.target.result;
+            document.getElementById('drop-cover').innerText = "✅ " + file.name;
         };
         reader.readAsDataURL(file);
     }
 
-    function syncFontSize(source) {
-        const range = document.getElementById('fontSizeRange');
-        const num = document.getElementById('fontSizeNum');
-        if (source === 'range') num.value = range.value;
-        else range.value = num.value;
-        drawCanvas();
-    }
-
     function wrapText(context, text, x, y, maxWidth, maxHeight, lineHeight) {
+        if (!text) return; 
         const paragraphs = text.split('\n');
         const centerX = x + (maxWidth / 2);
         let currentY = y; 
@@ -324,41 +558,35 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
     }
 
     function drawCanvas() {
-        // 1. Clear
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 2. Draw User Image (Bottom Layer)
+        // 1. Draw User Image
         if (coverUserImg.src) {
             ctx.drawImage(coverUserImg, 0, 0, 1080, 843);
         } else {
-            // Placeholder gray if no image
             ctx.fillStyle = "#444"; ctx.fillRect(0,0,1080,843);
             ctx.fillStyle = "#666"; ctx.font = "40px sans-serif"; ctx.textAlign="center";
+            ctx.textBaseline = "middle";
             ctx.fillText("Upload Cover Photo", 540, 420);
         }
 
-        // 3. Draw Template (Middle Layer)
+        // 2. Draw Template
         if (assetsLoaded) {
             ctx.drawImage(templateImg, 0, 0, 1080, 1350);
         }
 
-        // 4. Draw Text (Headline from Line 1)
-        const fullText = document.getElementById('inputText').value;
-        const headline = fullText.split('\n')[0]; // GET FIRST LINE
-
+        // 3. Draw Text
+        const headline = document.getElementById('coverHeadlineInput').value;
         const fontSize = parseInt(document.getElementById('fontSizeNum').value);
         const multiplier = parseFloat(document.getElementById('lineHeightMult').value);
         const lineHeight = fontSize * multiplier;
-
-        // Auto-Color Logic
         const currentTemplate = document.getElementById('templateSelect').value;
+        
         ctx.fillStyle = currentTemplate.includes('red') ? "white" : "black";
-
         ctx.font = `${fontSize}px Georgia`;
         ctx.textBaseline = 'top'; 
         ctx.textAlign = "center"; 
 
-        // Debug Box
         if (document.getElementById('debugBox').checked) {
             ctx.strokeStyle = "green"; ctx.lineWidth = 5;
             ctx.strokeRect(BOX_X, BOX_Y, BOX_W, BOX_H);
@@ -367,15 +595,18 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
         wrapText(ctx, headline, BOX_X, BOX_Y, BOX_W, BOX_H, lineHeight);
     }
 
-    // --- SECTION 2: HTML SLIDE LOGIC ---
+    // --- SLIDE LOGIC ---
 
-    function loadTextFile(input) {
-        const file = input.files[0];
+    function loadTextFile(file) {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = function(e) {
-            document.getElementById('inputText').value = e.target.result;
-            handleInputUpdate();
+            const textContent = e.target.result;
+            document.getElementById('inputText').value = textContent;
+            document.getElementById('drop-text').innerText = "✅ " + file.name;
+            
+            // Force refresh which triggers the sync
+            refreshAll();
         };
         reader.readAsText(file);
     }
@@ -399,7 +630,6 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
             content = content.replace(/__(.*?)__/g, '<span class="dm-italic">$1</span>');
             
             let paragraphs = content.split('\n').filter(p => p.trim() !== '');
-            
             if (count === 0 && paragraphs.length > 0) {
                 let firstP = paragraphs[0];
                 let firstChar = firstP.charAt(0);
@@ -408,11 +638,9 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
             }
 
             const finalHtml = paragraphs.map(p => `<p>${p}</p>`).join('');
-
             const slide = document.createElement('div');
-            slide.className = 'slide slide-html'; // Marker class
+            slide.className = 'slide slide-html';
 
-            // Header
             const header = document.createElement('div');
             header.className = 'slide-header';
             const img = document.createElement('img');
@@ -422,7 +650,6 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
             header.appendChild(img);
             slide.appendChild(header);
 
-            // Body
             const bodyDiv = document.createElement('div');
             bodyDiv.className = 'slide-content';
             bodyDiv.innerHTML = finalHtml;
@@ -430,7 +657,6 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
 
             container.appendChild(slide);
 
-            // Auto-Scale
             let fontSize = 85; 
             bodyDiv.style.fontSize = fontSize + "px";
             while (bodyDiv.scrollHeight > bodyDiv.clientHeight && fontSize > 20) {
@@ -441,10 +667,9 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
         }
     }
 
-    // --- SECTION 3: DOWNLOAD LOGIC (ZIP) ---
+    // --- DOWNLOAD LOGIC ---
 
     async function captureHtmlSlide(element) {
-        // Clone to render off-screen without scale transform
         const clone = element.cloneNode(true);
         clone.style.transform = "none"; 
         clone.style.margin = "0";
@@ -465,23 +690,18 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
         
         const zip = new JSZip();
         
-        // 1. Filename Setup
-        const rawText = document.getElementById('inputText').value;
-        const headline = rawText.split('\n')[0].trim() || "Daily_Malarkey";
-        const safeFilename = headline.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+        const headline = document.getElementById('coverHeadlineInput').value.trim() || "Daily_Malarkey";
+        const safeFilename = headline.replace(/[^a-z0-9]/gi, '_').substring(0, 100);
 
-        // 2. Add Cover (Canvas)
         const coverBlob = await new Promise(resolve => canvas.toBlob(resolve));
-        zip.file("00_Cover.png", coverBlob);
+        zip.file("FRONT PAGE.png", coverBlob);
 
-        // 3. Add Slides (HTML)
         const slides = document.querySelectorAll('.slide-html');
         for (let i = 0; i < slides.length; i++) {
             const blob = await captureHtmlSlide(slides[i]);
-            zip.file(`Slide_${i + 1}.png`, blob);
+            zip.file(`PAGE ${i + 1}.png`, blob);
         }
 
-        // 4. Save
         zip.generateAsync({type:"blob"}).then(function(content) {
             saveAs(content, `${safeFilename}.zip`);
             btn.innerText = "2. Download All as ZIP";
@@ -489,4 +709,5 @@ The two men released the single __Two Zulu Men In Ibiza__ in 2022 to commemorate
     }
 </script>
 </body>
+
 </html>
