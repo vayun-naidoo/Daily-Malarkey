@@ -691,7 +691,7 @@ __Notice how the sentence ends with a full stop, then a space, then the bold tag
         const zip = new JSZip();
         
         const headline = document.getElementById('coverHeadlineInput').value.trim() || "Daily_Malarkey";
-        const safeFilename = headline.replace(/[^a-z0-9]/gi, '_').substring(0, 100);
+        const safeFilename = headline.replace(/[^a-z0-9 ]/gi, '_').substring(0, 100); // spaces included in title but other safe characters not
 
         const coverBlob = await new Promise(resolve => canvas.toBlob(resolve));
         zip.file("FRONT PAGE.png", coverBlob);
